@@ -1,0 +1,50 @@
+#!python
+import schedule
+import time
+import requests
+from dateutil.parser import parse as time_parser
+import argparse
+import os
+
+host = os.getenv('RABBITMQ_MANAGEMENT_HOST', "http://guest:guest@localhost:15672")
+timeout_seconds = float(os.getenv('QUEUE_TIMEOUT_MINUTES', 10)) * 60
+clean_minutes =  float(os.getenv('CLEAN_MINUTES', 10))
+
+headers = {
+    'cache-control': "no-cache",
+    'postman-token': "ea7f8203-fc6e-50c1-059f-5233daeb1d57"
+    }
+
+
+def clean_empty_queues():
+    response = requests.request("GET", host + '/api/queues', headers=headers)
+    count = 0
+    for queue in response.json():
+        count += 1
+        consumers = queue['consumers']
+        messages = queue['messages']
+        state = queue['state']
+        messages_unacknowledged = queue['messages_unacknowledged']
+        idle_since = time_parser(queue['idle_since'])
+        name = queue['name']
+        vhost = '%2f'  if (queue['vhost'] == '/') else queue['vhost']
+
+        if (consumers == 0 and
+            messages == 0 and
+            messages_unacknowledged == 0 and
+            (idle_since.now() - idle_since).total_seconds() > timeout_seconds):
+            print 'queue', name, 'has been inactive for', int((idle_since.now() - idle_since).total_seconds()/60), 'minutes'
+
+            delete_url = url + '/' + vhost + '/' + name + '?if-empty=true:if-unused=true'
+            response = requests.request("DELETE", delete_url, headers=headers)
+            print 'deleting queue '+ name + ' ' + delete_url, response
+
+    print time.strftime("%a, %d %b %Y %H:%M:%S"), count, 'queues processed'
+
+
+schedule.every(clean_minutes).minutes.do(clean_empty_queues)
+
+
+while True:
+    schedule.run_pending()
+    time.sleep(1)
