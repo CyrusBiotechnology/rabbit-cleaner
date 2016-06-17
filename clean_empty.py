@@ -12,7 +12,7 @@ clean_minutes =  float(os.getenv('CLEAN_MINUTES', 10))
 
 
 def clean_empty_queues():
-    response = requests.request("GET", host + '/api/queues', headers=headers)
+    response = requests.request("GET", host + '/api/queues')
     count = 0
     for queue in response.json():
         count += 1
