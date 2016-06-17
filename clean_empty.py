@@ -1,6 +1,7 @@
 #!python
 import schedule
 import time
+import datetime
 import requests
 from dateutil.parser import parse as time_parser
 import argparse
@@ -20,7 +21,7 @@ def clean_empty_queues():
         messages = queue['messages']
         state = queue['state']
         messages_unacknowledged = queue['messages_unacknowledged']
-        idle_since = time_parser(queue['idle_since'])
+        idle_since =  time_parser(queue['idle_since']) if 'idle_since' in queue else datetime.datetime.now()
         name = queue['name']
         vhost = '%2f'  if (queue['vhost'] == '/') else queue['vhost']
 
@@ -30,8 +31,8 @@ def clean_empty_queues():
             (idle_since.now() - idle_since).total_seconds() > timeout_seconds):
             print 'queue', name, 'has been inactive for', int((idle_since.now() - idle_since).total_seconds()/60), 'minutes'
 
-            delete_url = url + '/' + vhost + '/' + name + '?if-empty=true:if-unused=true'
-            response = requests.request("DELETE", delete_url, headers=headers)
+            delete_url = host +  '/api/queues/' +vhost + '/' + name + '?if-empty=true:if-unused=true'
+            response = requests.request("DELETE", delete_url)
             print 'deleting queue '+ name + ' ' + delete_url, response
 
     print time.strftime("%a, %d %b %Y %H:%M:%S"), count, 'queues processed'
