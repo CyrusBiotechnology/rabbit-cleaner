@@ -46,5 +46,6 @@ schedule.every(clean_minutes).minutes.do(clean_empty_queues)
 
 
 while True:
+    clean_empty_queues()
     schedule.run_pending()
     time.sleep(1)
