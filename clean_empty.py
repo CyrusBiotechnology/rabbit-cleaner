@@ -10,11 +10,6 @@ host = os.getenv('RABBITMQ_MANAGEMENT_HOST', "http://guest:guest@localhost:15672
 timeout_seconds = float(os.getenv('QUEUE_TIMEOUT_MINUTES', 10)) * 60
 clean_minutes =  float(os.getenv('CLEAN_MINUTES', 10))
 
-headers = {
-    'cache-control': "no-cache",
-    'postman-token': "ea7f8203-fc6e-50c1-059f-5233daeb1d57"
-    }
-
 
 def clean_empty_queues():
     response = requests.request("GET", host + '/api/queues', headers=headers)
