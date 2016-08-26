@@ -14,31 +14,36 @@ clean_minutes =  float(os.getenv('CLEAN_MINUTES', 10))
 regex_pattern = os.getenv('PATTERN', '.*')
 
 def clean_empty_queues():
-    response = requests.request("GET", host + '/api/queues')
-    count = 0
-    pattern = re.compile(regex_pattern)
-    for queue in response.json():
-        count += 1
-        consumers = queue['consumers']
-        messages = queue['messages']
-        state = queue['state']
-        messages_unacknowledged = queue['messages_unacknowledged']
-        idle_since =  time_parser(queue['idle_since']) if 'idle_since' in queue else datetime.datetime.now()
-        name = queue['name']
-        vhost = '%2f'  if (queue['vhost'] == '/') else queue['vhost']
+    try:
+        response = requests.request("GET", host + '/api/queues')
+        count = 0
+        pattern = re.compile(regex_pattern)
+        for queue in response.json():
+            count += 1
+            consumers = queue['consumers']
+            messages = queue['messages']
+            state = queue['state']
+            messages_unacknowledged = queue['messages_unacknowledged']
+            idle_since =  time_parser(queue['idle_since']) if 'idle_since' in queue else datetime.datetime.now()
+            name = queue['name']
+            vhost = '%2f'  if (queue['vhost'] == '/') else queue['vhost']
+    
+            if (pattern.match(name) and
+                consumers == 0 and
+                messages == 0 and
+                messages_unacknowledged == 0 and
+                (idle_since.now() - idle_since).total_seconds() > timeout_seconds):
+                print 'queue', name, 'has been inactive for', int((idle_since.now() - idle_since).total_seconds()/60), 'minutes'
+    
+                delete_url = host +  '/api/queues/' +vhost + '/' + name + '?if-empty=true:if-unused=true'
+                response = requests.request("DELETE", delete_url)
+                print 'deleting queue '+ name + ' ' + delete_url, response
+    
+        print time.strftime("%a, %d %b %Y %H:%M:%S"), count, 'queues processed'
+    
+    except Exception as e:
+        print time.strftime("%a, %d %b %Y %H:%M:%S"), 'cleanup failed.'
 
-        if (pattern.match(name) and
-            consumers == 0 and
-            messages == 0 and
-            messages_unacknowledged == 0 and
-            (idle_since.now() - idle_since).total_seconds() > timeout_seconds):
-            print 'queue', name, 'has been inactive for', int((idle_since.now() - idle_since).total_seconds()/60), 'minutes'
-
-            delete_url = host +  '/api/queues/' +vhost + '/' + name + '?if-empty=true:if-unused=true'
-            response = requests.request("DELETE", delete_url)
-            print 'deleting queue '+ name + ' ' + delete_url, response
-
-    print time.strftime("%a, %d %b %Y %H:%M:%S"), count, 'queues processed'
 
 
 schedule.every(clean_minutes).minutes.do(clean_empty_queues)
