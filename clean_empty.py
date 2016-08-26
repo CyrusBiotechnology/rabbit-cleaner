@@ -6,15 +6,17 @@ import requests
 from dateutil.parser import parse as time_parser
 import argparse
 import os
+import re
 
 host = os.getenv('RABBITMQ_MANAGEMENT_HOST', "http://guest:guest@localhost:15672")
 timeout_seconds = float(os.getenv('QUEUE_TIMEOUT_MINUTES', 10)) * 60
 clean_minutes =  float(os.getenv('CLEAN_MINUTES', 10))
-
+regex_pattern = os.getenv('PATTERN', '.*')
 
 def clean_empty_queues():
     response = requests.request("GET", host + '/api/queues')
     count = 0
+    pattern = re.compile(regex_pattern)
     for queue in response.json():
         count += 1
         consumers = queue['consumers']
@@ -25,7 +27,8 @@ def clean_empty_queues():
         name = queue['name']
         vhost = '%2f'  if (queue['vhost'] == '/') else queue['vhost']
 
-        if (consumers == 0 and
+        if (pattern.match(name) and
+            consumers == 0 and
             messages == 0 and
             messages_unacknowledged == 0 and
             (idle_since.now() - idle_since).total_seconds() > timeout_seconds):
