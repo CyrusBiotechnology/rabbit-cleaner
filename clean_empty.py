@@ -12,6 +12,7 @@ host = os.getenv('RABBITMQ_MANAGEMENT_HOST', "http://guest:guest@localhost:15672
 timeout_seconds = float(os.getenv('QUEUE_TIMEOUT_MINUTES', 10)) * 60
 clean_minutes =  float(os.getenv('CLEAN_MINUTES', 10))
 regex_pattern = os.getenv('PATTERN', '.*')
+force_delete = os.getenv('FORCE_DELETE', False)
 
 def clean_empty_queues():
     try:
@@ -35,7 +36,8 @@ def clean_empty_queues():
                 (idle_since.now() - idle_since).total_seconds() > timeout_seconds):
                 print 'queue', name, 'has been inactive for', int((idle_since.now() - idle_since).total_seconds()/60), 'minutes'
     
-                delete_url = host +  '/api/queues/' +vhost + '/' + name + '?if-empty=true:if-unused=true'
+                delete_url = host +  '/api/queues/' +vhost + '/' + name
+                delete_url += '' if force_delete else '?if-empty=true:if-unused=true'
                 response = requests.request("DELETE", delete_url)
                 print 'deleting queue '+ name + ' ' + delete_url, response
     
