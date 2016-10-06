@@ -1,8 +1,8 @@
 FROM alpine
 
 RUN apk add --update \
-    python \
-    py-pip \
+    python3 \
+  && easy_install-3.5 pip \
   && rm -rf /var/cache/apk/*
 
 WORKDIR /
