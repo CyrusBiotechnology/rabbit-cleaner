@@ -16,9 +16,9 @@ logger = logging.getLogger(__name__)
 
 def clean_empty_queues(base_url, regex_pattern, queue_idle_minutes, force_delete=False):
     logger.info("running")
+    pattern = re.compile(regex_pattern)
     try:
         response = requests.request("GET", base_url + '/api/queues')
-        pattern = re.compile(regex_pattern)
         total = 0
         matched = 0
         deleted = 0
