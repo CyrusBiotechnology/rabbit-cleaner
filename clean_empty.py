@@ -83,6 +83,8 @@ if __name__ == "__main__":
     })
 
     argparser = argparse.ArgumentParser(description='Clean empty RabbitMQ queues.')
+    argparser.add_argument('pattern', type=str, default=".*",
+                           help="Regex pattern use to select the queues under management (default: %(default)s)")
     argparser.add_argument('--url', type=str, default="http://guest:guest@localhost:15672",
                            help="RabbitMQ management interface base URL (default: %(default)s)")
     argparser.add_argument('--queue-idle-minutes', type=int, default=10,
@@ -90,8 +92,6 @@ if __name__ == "__main__":
                                  "(default: %(default)s)"))
     argparser.add_argument('--clean-minutes', type=int, default=10,
                            help="Number of minutes between runs (default: %(default)s)")
-    argparser.add_argument('--pattern', type=str, default=".*",
-                           help="Regex pattern use to select the queues under management (default: %(default)s)")
     argparser.add_argument('--force', default=False, action='store_true',
                            help="Delete queue even if it is not empty or unused")
     args = argparser.parse_args()
