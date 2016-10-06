@@ -96,9 +96,12 @@ if __name__ == "__main__":
                            help="Delete queue even if it is not empty or unused")
     args = argparser.parse_args()
 
-    schedule.every(args.clean_minutes).minutes.do(clean_empty_queues)
+    def job():
+        clean_empty_queues(args.url, args.pattern, args.queue_idle_minutes, force_delete=args.force)
 
-    clean_empty_queues(args.url, args.pattern, args.queue_idle_minutes, force_delete=args.force)
+    schedule.every(args.clean_minutes).minutes.do(job)
+
+    job()
     while True:
         schedule.run_pending()
         time.sleep(1)
