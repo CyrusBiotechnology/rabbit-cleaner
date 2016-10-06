@@ -1,4 +1,4 @@
-#!python
+#!/usr/bin/env python
 from dateutil.parser import parse as time_parser
 import requests
 
@@ -30,7 +30,7 @@ def clean_empty_queues(base_url, regex_pattern, queue_idle_minutes, force_delete
             idle_since = time_parser(queue['idle_since']) if 'idle_since' in queue else datetime.datetime.now()
             name = queue['name']
             vhost = '%2f' if (queue['vhost'] == '/') else queue['vhost']
-    
+
             if (pattern.match(name) and
                     consumers == 0 and
                     messages == 0 and
@@ -39,7 +39,7 @@ def clean_empty_queues(base_url, regex_pattern, queue_idle_minutes, force_delete
                 matched += 1
                 idle_minutes = int((idle_since.now() - idle_since).total_seconds() / 60)
                 logger.debug('queue "%s" has been inactive for %d minutes' % (queue, idle_minutes))
-    
+
                 delete_url = base_url + '/api/queues/' + vhost + '/' + name
                 delete_url += '' if force_delete else '?if-empty=true:if-unused=true'
                 logger.info('deleting queue "%s"' % delete_url)
@@ -50,7 +50,7 @@ def clean_empty_queues(base_url, regex_pattern, queue_idle_minutes, force_delete
                     logger.error('problem deleting queue "%s": %s' % (name, response.text))
 
         logger.debug('%d queues processed, %d matched parameters, %d deleted' % (total, matched, deleted))
-    
+
     except Exception as e:
         logger.error("cleanup failed: %s" % e)
 

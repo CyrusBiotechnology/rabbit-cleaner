@@ -1,12 +1,12 @@
 FROM alpine
 
 RUN apk add --update \
-    python3 \
-  && easy_install-3.5 pip \
+    python \
+    py-pip \
   && rm -rf /var/cache/apk/*
 
 WORKDIR /
-COPY clean_empty.py /
+COPY clean_empty.py /usr/bin/clean_empty.py
 COPY requirements.txt requirements.txt
 RUN pip install -r /requirements.txt
-ENTRYPOINT ["python", "/clean_empty.py"]
+ENTRYPOINT ["clean_empty.py"]
