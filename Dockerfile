@@ -5,7 +5,8 @@ RUN apk add --update \
     py-pip \
   && rm -rf /var/cache/apk/*
 
-COPY clean_empty.py /usr/bin
+WORKDIR /
+COPY clean_empty.py /
 COPY requirements.txt requirements.txt
 RUN pip install -r /requirements.txt
-CMD ["python", "/usr/bin/clean_empty.py"]
+ENTRYPOINT ["python", "/clean_empty.py"]

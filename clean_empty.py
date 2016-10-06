@@ -92,7 +92,8 @@ if __name__ == "__main__":
                            help="Number of minutes between runs (default: %(default)s)")
     argparser.add_argument('--pattern', type=str, default=".*",
                            help="Regex pattern use to select the queues under management (default: %(default)s)")
-    argparser.add_argument('--force', type=bool, default=False, help="Delete queue even if it is not empty or unused")
+    argparser.add_argument('--force', default=False, action='store_true',
+                           help="Delete queue even if it is not empty or unused")
     args = argparser.parse_args()
 
     schedule.every(args.clean_minutes).minutes.do(clean_empty_queues)
