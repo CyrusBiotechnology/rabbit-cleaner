@@ -2,7 +2,7 @@
 
 Utility that cleans up unused queues from RabbitMQ. It searches for and deletes 
 queues that match a regex pattern that have been idle for the configured 
-period at configured interval.
+period at the given interval.
 
 ## Installation
 
