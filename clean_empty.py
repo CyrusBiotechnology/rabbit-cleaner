@@ -14,7 +14,7 @@ import time
 logger = logging.getLogger(__name__)
 
 
-def clean_empty_queues(base_url, regex_pattern, queue_idle_minutes, force_delete=False, vhost=None):
+def clean_empty_queues(base_url, regex_pattern, queue_idle_minutes, force_delete=False):
     logger.info("running")
     try:
         response = requests.request("GET", base_url + '/api/queues')
