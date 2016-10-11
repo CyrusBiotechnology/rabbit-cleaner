@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+import traceback
+
 from dateutil.parser import parse as time_parser
 import requests
 
@@ -14,28 +16,56 @@ import time
 logger = logging.getLogger(__name__)
 
 
+# def get_queue_list_in_pages(base_url, page_size=100, offset=0):
+#     page = offset
+#     payload = {'page': page, 'page_size': page_size}
+#     response = requests.request("GET", base_url + '/api/queues', params=payload)
+#     json = response.json()
+#     json['']
+#     while response.status_code == 200:
+#         response = requests.request("GET", base_url + '/api/queues', params=payload)
+#         yield response.json()
+
+
 def clean_empty_queues(base_url, regex_pattern, queue_idle_minutes, force_delete=False):
-    logger.info("started")
+    start = time.time()
     pattern = re.compile(regex_pattern)
+    payload = {
+        'name': regex_pattern,
+        'use_regex': 'true'
+    }
     try:
-        response = requests.request("GET", base_url + '/api/queues')
+        response = requests.request("GET", base_url + '/api/queues', params=payload)
         total = 0
         matched = 0
         deleted = 0
         for i, queue in enumerate(response.json()):
             total += 1
-            consumers = queue['consumers']
-            messages = queue['messages']
-            messages_unacknowledged = queue['messages_unacknowledged']
-            idle_since = time_parser(queue['idle_since']) if 'idle_since' in queue else datetime.datetime.now()
             name = queue['name']
+
+            consumers = queue.get('consumers')
+            if consumers and consumers != 0:
+                logger.debug('%s has %s consumers, skipping' % (name, consumers))
+                continue
+
+            messages = queue.get('messages')
+            if messages and messages != 0:
+                logger.debug('%s has %s messages, skipping' % (name, messages))
+                continue
+
+            messages_unacknowledged = queue.get('messages_unacknowledged')
+            if messages_unacknowledged and messages_unacknowledged != 0:
+                logger.debug('%s has %s unacked messages, skipping' % (name, messages_unacknowledged))
+                continue
+
+            idle_since = time_parser(queue['idle_since']) if 'idle_since' in queue else datetime.datetime.now()
+            if idle_since and (idle_since.now() - idle_since).total_seconds() > queue_idle_minutes * 60:
+                logger.debug('%s is not idle, skipping' % name)
+                continue
+
             vhost = '%2f' if (queue['vhost'] == '/') else queue['vhost']
 
-            if (pattern.match(name) and
-                    consumers == 0 and
-                    messages == 0 and
-                    messages_unacknowledged == 0 and
-                    (idle_since.now() - idle_since).total_seconds() > queue_idle_minutes * 60):
+            if pattern.match(name):
                 matched += 1
                 idle_minutes = int((idle_since.now() - idle_since).total_seconds() / 60)
                 logger.debug('queue "%s" has been inactive for %d minutes' % (queue, idle_minutes))
@@ -51,8 +81,10 @@ def clean_empty_queues(base_url, regex_pattern, queue_idle_minutes, force_delete
 
         logger.debug('%d queues processed, %d matched parameters, %d deleted' % (total, matched, deleted))
 
-    except Exception as e:
-        logger.error("cleanup failed: %s" % e)
+    except Exception as error:
+        logger.exception(error)
+    else:
+        logger.info("execution took %s" % (time.time() - start))
 
 
 if __name__ == "__main__":
@@ -73,7 +105,7 @@ if __name__ == "__main__":
         'loggers': {
             '': {
                 'handlers': ['console'],
-                'level': os.getenv('LOGGING_LEVEL', 'DEBUG'),
+                'level': os.getenv('LOGGING_LEVEL', 'INFO'),
             },
             'requests.packages.urllib3.connectionpool': {
                 'handlers': ['console'],
@@ -96,10 +128,14 @@ if __name__ == "__main__":
                            help="Delete queue even if it is not empty or unused")
     args = argparser.parse_args()
 
+    logger.info('starting up...')
+
     def job():
         clean_empty_queues(args.url, args.pattern, args.queue_idle_minutes, force_delete=args.force)
 
-    schedule.every(args.clean_minutes).minutes.do(job)
+    if args.clean_minutes is not None and args.clean_minutes > 0:
+        logger.info('running every %s minutes' % args.clean_minutes)
+        schedule.every(args.clean_minutes).minutes.do(job)
 
     job()
     while True:
